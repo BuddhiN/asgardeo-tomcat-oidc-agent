@@ -18,6 +18,7 @@
 
 package io.asgardeo.tomcat.oidc.agent;
 
+import com.google.gson.Gson;
 import com.nimbusds.oauth2.sdk.util.StringUtils;
 import io.asgardeo.java.oidc.sdk.HTTPSessionBasedOIDCProcessor;
 import io.asgardeo.java.oidc.sdk.SSOAgentConstants;
@@ -31,8 +32,14 @@ import io.asgardeo.java.oidc.sdk.request.OIDCRequestResolver;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import io.asgardeo.tomcat.oidc.agent.utility.OrganizationsResponse;
+import io.asgardeo.tomcat.oidc.agent.utility.TokenPayload;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -135,6 +142,17 @@ public class OIDCAgentFilter implements Filter {
                 return;
             }
 
+            String endpointUrl = "https://localhost:9443/api/users/v1/me/organizations"; //todo:move this out
+            String apiResponse = fetchSubOrganizations(endpointUrl, request);
+
+            assert apiResponse != null;
+
+            Gson gson = new Gson();
+            OrganizationsResponse organizationsResponse = gson.fromJson(apiResponse, OrganizationsResponse.class);
+
+            request.getSession(false).setAttribute("data", organizationsResponse);
+            //response.getWriter().write(apiResponse);
+
             response.sendRedirect(homePage);
             return;
         }
@@ -225,5 +243,60 @@ public class OIDCAgentFilter implements Filter {
             return oidcAgentConfig.getIndexPage();
         }
         return SSOAgentConstants.DEFAULT_CONTEXT_ROOT;
+    }
+
+    private String getAccessToken(HttpServletRequest request) {
+
+        HttpSession currentSession = request.getSession(false);
+        String accessToken = null;
+
+        if (isActiveSessionPresent(request)) {
+            final SessionContext sessionContext = (SessionContext) currentSession.getAttribute(SSOAgentConstants.SESSION_CONTEXT);
+            accessToken = jsonToAccessToken(sessionContext.getAccessToken());
+        }
+
+        return accessToken;
+    }
+
+    private String jsonToAccessToken(String jsonString) {
+
+        Gson gson = new Gson();
+        TokenPayload tokenPayload = gson.fromJson(jsonString, TokenPayload.class);
+        return tokenPayload.getAccess_token();
+    }
+
+    private String fetchSubOrganizations(String endpointUrl, HttpServletRequest request) {
+        StringBuilder response = new StringBuilder();
+
+        URL url = null;
+        try {
+            url = new URL(endpointUrl);
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + getAccessToken(request));
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+
+                in.close();
+            } else {
+                System.err.println("Failed to retrieve data from API. Response Code: " + responseCode);
+                return null;
+            }
+
+            connection.disconnect();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return response.toString();
     }
 }

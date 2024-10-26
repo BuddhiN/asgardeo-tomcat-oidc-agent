@@ -20,7 +20,6 @@
 <%@ page import="io.asgardeo.java.oidc.sdk.bean.SessionContext" %>
 <%@ page import="io.asgardeo.java.oidc.sdk.bean.User" %>
 <%@ page import="io.asgardeo.java.oidc.sdk.config.model.OIDCAgentConfig" %>
-<%@ page import="io.asgardeo.tomcat.oidc.agent.utility.OrganizationsResponse" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.HashMap" %>
 <%@ page import="java.util.Map" %>
@@ -32,10 +31,6 @@
     final SessionContext sessionContext = (SessionContext)
             currentSession.getAttribute(SSOAgentConstants.SESSION_CONTEXT);
     final String idToken = sessionContext.getIdToken();
-    final String accessToken = sessionContext.getAccessToken();
-
-    final OrganizationsResponse orgResponse = (OrganizationsResponse)currentSession.getAttribute("data");
-    System.out.println("org set ---- " + orgResponse.toString());
 
     String scopes = "";
 
@@ -75,24 +70,12 @@
         <div class="container">
             <div class="header-title">
                 <h1>
-                    Java-Based OIDC Authentication Sample<br> (OIDC - Authorization Code Grant)
+                    Sub Org Page
                 </h1>
             </div>
-
             <div class="content">
-                <form action="suborg.jsp" method="post">
-                    <div class="element-padding">
-                        <button class="btn primary" type="submit">WA_US</button>
-                    </div>
-                </form>
-                <form action="suborg.jsp" method="post">
-                    <div class="element-padding">
-                        <button class="btn primary" type="submit">WA_CANADA</button>
-                    </div>
-                </form>
                 <h3>
-                    Your app has successfully connected with Asgardeo and the user is logged in.<br>
-                    This is the user information returned from Asgardeo.
+                    Your app has successfully connected with Envestnet
                 </h3>
                 <h2>Authentication Response</h2>
                 <div class="json">
