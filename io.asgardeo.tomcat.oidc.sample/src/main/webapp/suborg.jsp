@@ -62,7 +62,8 @@
     <link rel="stylesheet" type="text/css" href="theme.css">
 </head>
 <body>
-
+<h2>Submitted Data</h2>
+<p>Org ID: <%= request.getParameter("hiddenOrgId") %></p>
     <div class="ui two column centered grid">
         <div class="column center aligned">
             <img src="images/logo-dark.svg" class="logo-image">

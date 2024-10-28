@@ -21,7 +21,9 @@
 <%@ page import="io.asgardeo.java.oidc.sdk.bean.User" %>
 <%@ page import="io.asgardeo.java.oidc.sdk.config.model.OIDCAgentConfig" %>
 <%@ page import="io.asgardeo.tomcat.oidc.agent.utility.OrganizationsResponse" %>
+<%@ page import="io.asgardeo.tomcat.oidc.agent.utility.Organization" %>
 <%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
 <%@ page import="java.util.HashMap" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="net.minidev.json.JSONObject" %>
@@ -36,6 +38,7 @@
 
     final OrganizationsResponse orgResponse = (OrganizationsResponse)currentSession.getAttribute("data");
     System.out.println("org set ---- " + orgResponse.toString());
+    List<Organization> orgList = orgResponse.getOrganizations();
 
     String scopes = "";
 
@@ -80,15 +83,21 @@
             </div>
 
             <div class="content">
-                <form action="suborg.jsp" method="post">
+                <form id="orgForm" action="suborg.jsp" method="post">
+                    <input type="hidden" id="hiddenOrgId" name="hiddenOrgId">
+                    <%
+                        for (int i = 0; i < orgList.size(); i++) {
+                            Organization organization = orgList.get(i);
+                    %>
                     <div class="element-padding">
-                        <button class="btn primary" type="submit">WA_US</button>
+                        <button class="btn primary orgBtn" type="button" id="'<%=organization.getId() %>'">
+                        <%=organization.getName() %>
+                        </button>
                     </div>
-                </form>
-                <form action="suborg.jsp" method="post">
-                    <div class="element-padding">
-                        <button class="btn primary" type="submit">WA_CANADA</button>
-                    </div>
+                    <%
+                        }
+                    %>
+
                 </form>
                 <h3>
                     Your app has successfully connected with Asgardeo and the user is logged in.<br>
@@ -163,7 +172,7 @@
         var headerObject = JSON.parse(header);
         var responseObject = JSON.parse(JSON.stringify(responses));
 
-         const idTokenSplit = idToken.split(".");
+        const idTokenSplit = idToken.split(".");
 
         var responseViewBox = document.getElementById("authentication-response")
         var payloadViewBox = document.getElementById("id-token-payload");
@@ -184,6 +193,19 @@
         responseViewBox.appendChild(formattedResponse.render());
         payloadViewBox.appendChild(formattedPayloadResponse.render());
         headerViewBox.appendChild(formattedHeaderResponse.render());
+
+        const buttons = document.querySelectorAll(".orgBtn");
+
+            buttons.forEach(button => {
+                button.addEventListener("click", function() {
+                    // Access the id of the clicked button
+                    console.log("Clicked button ID:", this.id);
+                    document.getElementById("hiddenOrgId").value = this.id;
+
+                    console.log("hidden id === ", document.getElementById("hiddenOrgId").value);
+                    document.getElementById("orgForm").submit();
+                });
+            });
     </script>
 </body>
 </html>

@@ -35,11 +35,15 @@ import org.apache.logging.log4j.Logger;
 import io.asgardeo.tomcat.oidc.agent.utility.OrganizationsResponse;
 import io.asgardeo.tomcat.oidc.agent.utility.TokenPayload;
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -97,6 +101,15 @@ public class OIDCAgentFilter implements Filter {
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
+
+        String orgId = request.getParameter("hiddenOrgId");
+
+        if (orgId != null) {
+            String endpoint = "https://localhost:9443/oauth2/token"; // todo:fetch this from confi property file
+            String token = jsonToAccessToken(switchToSubOrg(endpoint, request, orgId));
+            System.out.println("sub org token ******* " + token);
+            return;
+        }
 
         OIDCRequestResolver requestResolver = new OIDCRequestResolver(request, oidcAgentConfig);
 
@@ -265,6 +278,60 @@ public class OIDCAgentFilter implements Filter {
         return tokenPayload.getAccess_token();
     }
 
+    private String switchToSubOrg(String endpointUrl, HttpServletRequest request, String orgId) {
+        StringBuilder response = new StringBuilder();
+
+        URL url = null;
+        try {
+            url = new URL(endpointUrl);
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+
+            connection.setRequestProperty("Authorization", "Basic THFxbDltbWZkN042N2pYSmwybTJjREhUZXlJYTpPcXd1N25KNkxQRnVNdVVlOTRPbFB0WXJ6NlNSc2RTUXptWW84RUhPZkpBYQ==" ); //todo:add encoded values here.
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setDoOutput(true);
+
+            String formParams = "grant_type=" + URLEncoder.encode("organization_switch", StandardCharsets.UTF_8)
+                    + "&token=" + URLEncoder.encode(getAccessToken(request), StandardCharsets.UTF_8)
+                    + "&scope=" + URLEncoder.encode("openid", StandardCharsets.UTF_8)
+                    + "&switching_organization=" + URLEncoder.encode("1bb599cb-534a-4b97-88b4-01fc0a16e49f", StandardCharsets.UTF_8); //todo:remove hard code value
+
+
+            /*connection.setRequestProperty("grant_type", "organization_switch");
+            connection.setRequestProperty("token", getAccessToken(request));
+            connection.setRequestProperty("scope", "openid address email groups roles internal_login");
+            connection.setRequestProperty("switching_organization", orgId);*/
+
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = formParams.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {//todo:if respone is not 200 handle null pointer
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+
+                in.close();
+            } else {
+                System.err.println("Failed to retrieve data from API. Response Code: " + responseCode);
+                return null;
+            }
+
+            connection.disconnect();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return response.toString();
+    }
+
+    //todo:move http call to a util class
     private String fetchSubOrganizations(String endpointUrl, HttpServletRequest request) {
         StringBuilder response = new StringBuilder();
 
@@ -275,7 +342,7 @@ public class OIDCAgentFilter implements Filter {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer " + getAccessToken(request));
+            connection.setRequestProperty("Authorization", "Bearer " + getAccessToken(request)); //todo:remove hardcoded values.
 
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
