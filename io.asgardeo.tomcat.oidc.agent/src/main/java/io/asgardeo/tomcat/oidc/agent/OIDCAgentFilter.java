@@ -268,6 +268,7 @@ public class OIDCAgentFilter implements Filter {
             accessToken = jsonToAccessToken(sessionContext.getAccessToken());
         }
 
+        System.out.println("root org access token ===== " + accessToken);
         return accessToken;
     }
 

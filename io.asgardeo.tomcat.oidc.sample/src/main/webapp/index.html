@@ -53,6 +53,10 @@
         </div>
         <img src="images/footer.png" class="footer-image">
     </div>
-
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const orgName = urlParams.get('org');
+        alert(" org id ====== " + orgName);
+    </script>
 </body>
 </html>
