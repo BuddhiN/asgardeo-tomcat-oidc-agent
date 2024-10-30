@@ -33,12 +33,13 @@
     final HttpSession currentSession = request.getSession(false);
     final SessionContext sessionContext = (SessionContext)
             currentSession.getAttribute(SSOAgentConstants.SESSION_CONTEXT);
-    final String idToken = sessionContext.getIdToken();
-    final String accessToken = sessionContext.getAccessToken();
+    //final String idToken = sessionContext.getIdToken();
+    //final String accessToken = sessionContext.getAccessToken();
+    final String idToken = (String)currentSession.getAttribute("subOrgToken");
 
-    final OrganizationsResponse orgResponse = (OrganizationsResponse)currentSession.getAttribute("data");
-    System.out.println("org set ---- " + orgResponse.toString());
-    List<Organization> orgList = orgResponse.getOrganizations();
+    //final OrganizationsResponse orgResponse = (OrganizationsResponse)currentSession.getAttribute("data");
+    //System.out.println("org set ---- " + orgResponse.toString());
+    //List<Organization> orgList = orgResponse.getOrganizations();
 
     String scopes = "";
 
@@ -83,22 +84,6 @@
             </div>
 
             <div class="content">
-                <form id="orgForm" action="suborg.jsp" method="post">
-                    <input type="hidden" id="hiddenOrgId" name="hiddenOrgId">
-                    <%
-                        for (int i = 0; i < orgList.size(); i++) {
-                            Organization organization = orgList.get(i);
-                    %>
-                    <div class="element-padding">
-                        <button class="btn primary orgBtn" type="button" id="'<%=organization.getId() %>'">
-                        <%=organization.getName() %>
-                        </button>
-                    </div>
-                    <%
-                        }
-                    %>
-
-                </form>
                 <h3>
                     Your app has successfully connected with Asgardeo and the user is logged in.<br>
                     This is the user information returned from Asgardeo.

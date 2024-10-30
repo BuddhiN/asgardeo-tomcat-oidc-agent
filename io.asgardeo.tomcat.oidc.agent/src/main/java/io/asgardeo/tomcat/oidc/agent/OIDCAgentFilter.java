@@ -29,6 +29,7 @@ import io.asgardeo.java.oidc.sdk.exception.SSOAgentClientException;
 import io.asgardeo.java.oidc.sdk.exception.SSOAgentException;
 import io.asgardeo.java.oidc.sdk.exception.SSOAgentServerException;
 import io.asgardeo.java.oidc.sdk.request.OIDCRequestResolver;
+import io.asgardeo.tomcat.oidc.agent.utility.Organization;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -102,14 +103,14 @@ public class OIDCAgentFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-        String orgId = request.getParameter("hiddenOrgId");
+        /*String orgId = request.getParameter("hiddenOrgId");
 
         if (orgId != null) {
             String endpoint = "https://localhost:9443/oauth2/token"; // todo:fetch this from confi property file
             String token = jsonToAccessToken(switchToSubOrg(endpoint, request, orgId));
             System.out.println("sub org token ******* " + token);
             return;
-        }
+        }*/
 
         OIDCRequestResolver requestResolver = new OIDCRequestResolver(request, oidcAgentConfig);
 
@@ -162,8 +163,16 @@ public class OIDCAgentFilter implements Filter {
 
             Gson gson = new Gson();
             OrganizationsResponse organizationsResponse = gson.fromJson(apiResponse, OrganizationsResponse.class);
+            Organization organization = organizationsResponse.getOrganizations().get(0);
 
-            request.getSession(false).setAttribute("data", organizationsResponse);
+            String tokenEndpoint = "https://localhost:9443/oauth2/token";
+            String subOrgToken = switchToSubOrg(tokenEndpoint,request, organization.getId());
+
+            request.getSession(false).setAttribute("subOrgToken", jsonToAccessToken(subOrgToken));
+
+            System.out.println("sub org token ::::: " + subOrgToken);
+
+            //request.getSession(false).setAttribute("data", organizationsResponse);
             //response.getWriter().write(apiResponse);
 
             response.sendRedirect(homePage);
@@ -268,7 +277,7 @@ public class OIDCAgentFilter implements Filter {
             accessToken = jsonToAccessToken(sessionContext.getAccessToken());
         }
 
-        System.out.println("root org access token ===== " + accessToken);
+
         return accessToken;
     }
 
@@ -289,14 +298,14 @@ public class OIDCAgentFilter implements Filter {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
 
-            connection.setRequestProperty("Authorization", "Basic THFxbDltbWZkN042N2pYSmwybTJjREhUZXlJYTpPcXd1N25KNkxQRnVNdVVlOTRPbFB0WXJ6NlNSc2RTUXptWW84RUhPZkpBYQ==" ); //todo:add encoded values here.
+            connection.setRequestProperty("Authorization", "Basic cHg1MmEzY1RibEtqUVhWSmVqWmxMTVZNRHI0YTpaMndmWXkwY1IzYjVpdkprRWZmMzlvdEh1U0FUbjNnWlRXemdHUVRmcDFBYQ==" ); //todo:add encoded values here.
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connection.setDoOutput(true);
 
             String formParams = "grant_type=" + URLEncoder.encode("organization_switch", StandardCharsets.UTF_8)
                     + "&token=" + URLEncoder.encode(getAccessToken(request), StandardCharsets.UTF_8)
                     + "&scope=" + URLEncoder.encode("openid", StandardCharsets.UTF_8)
-                    + "&switching_organization=" + URLEncoder.encode("1bb599cb-534a-4b97-88b4-01fc0a16e49f", StandardCharsets.UTF_8); //todo:remove hard code value
+                    + "&switching_organization=" + URLEncoder.encode(orgId, StandardCharsets.UTF_8); //todo:remove hard code value
 
 
             /*connection.setRequestProperty("grant_type", "organization_switch");
