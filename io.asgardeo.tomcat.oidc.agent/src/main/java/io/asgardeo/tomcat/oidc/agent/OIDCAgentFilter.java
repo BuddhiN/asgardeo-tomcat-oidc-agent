@@ -19,6 +19,8 @@
 package io.asgardeo.tomcat.oidc.agent;
 
 import com.google.gson.Gson;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.util.StringUtils;
 import io.asgardeo.java.oidc.sdk.HTTPSessionBasedOIDCProcessor;
 import io.asgardeo.java.oidc.sdk.SSOAgentConstants;
@@ -36,7 +38,6 @@ import org.apache.logging.log4j.Logger;
 import io.asgardeo.tomcat.oidc.agent.utility.OrganizationsResponse;
 import io.asgardeo.tomcat.oidc.agent.utility.TokenPayload;
 
-import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -45,6 +46,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -106,7 +108,7 @@ public class OIDCAgentFilter implements Filter {
         /*String orgId = request.getParameter("hiddenOrgId");
 
         if (orgId != null) {
-            String endpoint = "https://localhost:9443/oauth2/token"; // todo:fetch this from confi property file
+            String endpoint = "https://localhost:9443/oauth2/token"; // todo:fetch this from config property file
             String token = jsonToAccessToken(switchToSubOrg(endpoint, request, orgId));
             System.out.println("sub org token ******* " + token);
             return;
@@ -163,14 +165,34 @@ public class OIDCAgentFilter implements Filter {
 
             Gson gson = new Gson();
             OrganizationsResponse organizationsResponse = gson.fromJson(apiResponse, OrganizationsResponse.class);
-            Organization organization = organizationsResponse.getOrganizations().get(0);
 
-            String tokenEndpoint = "https://localhost:9443/oauth2/token";
-            String subOrgToken = switchToSubOrg(tokenEndpoint,request, organization.getId());
+            /*for(Organization organization : organizationsResponse.getOrganizations()) {
+                organization.getName()
+            }*/
 
-            request.getSession(false).setAttribute("subOrgToken", jsonToAccessToken(subOrgToken));
+            Organization organization = organizationsResponse.getOrganizations().get(0); //todo:select the correct org
 
-            System.out.println("sub org token ::::: " + subOrgToken);
+            String jwtToken = getAccessToken(request);
+            String orgNameClaim = null;
+            try {
+                SignedJWT signedJWT = SignedJWT.parse(jwtToken);
+                JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+                orgNameClaim = claims.getStringClaim("org_name");
+
+                System.out.println("org claim value ===== " + orgNameClaim);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+
+            if (orgNameClaim != null && orgNameClaim.equals("WA")) {
+                String tokenEndpoint = "https://localhost:9443/oauth2/token";
+                String subOrgToken = switchToSubOrg(tokenEndpoint, jwtToken, organization.getId());
+
+                request.getSession(false).setAttribute("subOrgToken", jsonToAccessToken(subOrgToken));
+                System.out.println("sub org token ::::: " + subOrgToken);
+            } else {
+                request.getSession(false).setAttribute("subOrgToken", jsonToAccessToken(jwtToken));
+            }
 
             //request.getSession(false).setAttribute("data", organizationsResponse);
             //response.getWriter().write(apiResponse);
@@ -288,7 +310,7 @@ public class OIDCAgentFilter implements Filter {
         return tokenPayload.getAccess_token();
     }
 
-    private String switchToSubOrg(String endpointUrl, HttpServletRequest request, String orgId) {
+    private String switchToSubOrg(String endpointUrl, String accessToken, String orgId) {
         StringBuilder response = new StringBuilder();
 
         URL url = null;
@@ -303,7 +325,7 @@ public class OIDCAgentFilter implements Filter {
             connection.setDoOutput(true);
 
             String formParams = "grant_type=" + URLEncoder.encode("organization_switch", StandardCharsets.UTF_8)
-                    + "&token=" + URLEncoder.encode(getAccessToken(request), StandardCharsets.UTF_8)
+                    + "&token=" + URLEncoder.encode(accessToken, StandardCharsets.UTF_8)
                     + "&scope=" + URLEncoder.encode("openid", StandardCharsets.UTF_8)
                     + "&switching_organization=" + URLEncoder.encode(orgId, StandardCharsets.UTF_8); //todo:remove hard code value
 

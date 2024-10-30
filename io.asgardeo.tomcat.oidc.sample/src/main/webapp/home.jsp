@@ -74,7 +74,7 @@
 
     <div class="ui two column centered grid">
         <div class="column center aligned">
-            <img src="images/logo-dark.svg" class="logo-image">
+            <img src="images/Envestnet_Logo.jpg" class="logo-image">
         </div>
         <div class="container">
             <div class="header-title">
@@ -85,14 +85,14 @@
 
             <div class="content">
                 <h3>
-                    Your app has successfully connected with Asgardeo and the user is logged in.<br>
-                    This is the user information returned from Asgardeo.
+                    Your app has successfully connected with WSO2 Identity Server and the user is logged in.<br>
+                    This is the user information returned from WSO2 Identity Server.
                 </h3>
                 <h2>Authentication Response</h2>
                 <div class="json">
                     <div id="authentication-response" class="json-container"></div>
                 </div>
-                <h2 class="mb-0 mt-4">ID token</h2>
+                <h2 class="mb-0 mt-4">Access token</h2>
 
                 <div class="row">
                     <div class="column">
@@ -131,11 +131,11 @@
                         </div>
                     </div>
                 </div>
-                <form action="logout" method="GET">
+                <!--<form action="logout" method="GET">
                     <div class="element-padding">
                         <button class="btn primary" type="submit">Logout</button>
                     </div>
-                </form>
+                </form>-->
             </div>
         </div>
         <img src="images/footer.png" class="footer-image">
